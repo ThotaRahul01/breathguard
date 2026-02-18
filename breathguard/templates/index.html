@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BreathGuard | Hyper-Local Air Quality Intelligence</title>
+    
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #1a5f7a;
+            --secondary: #159895;
+            --accent: #57c5b6;
+            --danger: #e74c3c;
+            --warning: #f39c12;
+            --success: #27ae60;
+            --dark: #1a252f;
+            --light: #ecf0f1;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background: linear-gradient(135deg, var(--dark) 0%, #2c3e50 100%);
+            color: var(--light);
+            min-height: 100vh;
+        }
+
+        /* Header */
+        .header {
+            background: rgba(26, 95, 122, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 1rem 2rem;
+            position: fixed;
+            width: 100%;
+            top: 0;
+            z-index: 1000;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+
+        .logo i {
+            color: var(--accent);
+            font-size: 2rem;
+        }
+
+        .nav-tabs {
+            display: flex;
+            gap: 10px;
+        }
+
+        .nav-tab {
+            padding: 8px 16px;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.3s;
+            background: rgba(255,255,255,0.1);
+            border: 1px solid transparent;
+        }
+
+        .nav-tab:hover, .nav-tab.active {
+            background: var(--accent);
+            color: var(--dark);
+        }
+
+        /* Main Layout */
+        .main-container {
+            margin-top: 80px;
+            padding: 20px;
+            display: grid;
+            grid-template-columns: 1fr 380px;
+            gap: 20px;
+            height: calc(100vh - 100px);
+        }
+
+        /* Map Section */
+        .map-section {
+            background: rgba(255,255,255,0.05);
+            border-radius: 20px;
+            overflow: hidden;
+            position: relative;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+        }
+
+        #map {
+            height: 100%;
+            width: 100%;
+        }
+
+        .map-overlay {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            z-index: 500;
+            background: rgba(0,0,0,0.8);
+            padding: 15px;
+            border-radius: 12px;
+            backdrop-filter: blur(10px);
+        }
+
+        .legend {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.9rem;
+        }
+
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            border: 2px solid white;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            overflow-y: auto;
+        }
+
+        .panel {
+            background: rgba(255,255,255,0.08);
+            border-radius: 16px;
+            padding: 20px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .panel h3 {
+            color: var(--accent);
+            margin-bottom: 15px;
+            font-size: 1.1rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        .stat-card {
+            background: rgba(0,0,0,0.3);
+            padding: 15px;
+            border-radius: 12px;
+            text-align: center;
+            border-left: 4px solid var(--accent);
+        }
+
+        .stat-value {
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: var(--accent);
+        }
+
+        .stat-label {
+            font-size: 0.85rem;
+            color: #aaa;
+            margin-top: 5px;
+        }
+
+        /* Zone Details */
+        .zone-info {
+            display: none;
+        }
+
+        .zone-info.active {
+            display: block;
+        }
+
+        .aqi-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: bold;
+            margin: 10px 0;
+            font-size: 0.9rem;
+        }
+
+        .data-source {
+            font-size: 0.75rem;
+            color: #888;
+            margin-top: 5px;
+            font-style: italic;
+        }
+
+        /* Forecast Chart */
+        .forecast-container {
+            margin-top: 15px;
+        }
+
+        .forecast-bar {
+            display: flex;
+            align-items: center;
+            margin: 8px 0;
+            gap: 10px;
+        }
+
+        .forecast-time {
+            width: 50px;
+            font-size: 0.85rem;
+            color: #aaa;
+        }
+
+        .forecast-visual {
+            flex: 1;
+            height: 30px;
+            background: rgba(0,0,0,0.3);
+            border-radius: 6px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .forecast-fill {
+            height: 100%;
+            border-radius: 6px;
+            transition: width 0.5s ease;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            padding-right: 8px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            color: white;
+        }
+
+        /* Alerts */
+        .alert-box {
+            background: linear-gradient(135deg, rgba(231, 76, 60, 0.2), rgba(231, 76, 60, 0.1));
+            border: 1px solid var(--danger);
+            border-radius: 12px;
+            padding: 15px;
+            margin: 10px 0;
+            display: none;
+        }
+
+        .alert-box.active {
+            display: block;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(231, 76, 60, 0.4); }
+            50% { box-shadow: 0 0 0 10px rgba(231, 76, 60, 0); }
+        }
+
+        /* Route Planner */
+        .route-inputs {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin: 15px 0;
+        }
+
+        .route-input {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: rgba(0,0,0,0.3);
+            padding: 10px;
+            border-radius: 8px;
+        }
+
+        .route-input i {
+            color: var(--accent);
+        }
+
+        .route-input input {
+            background: transparent;
+            border: none;
+            color: white;
+            width: 100%;
+            outline: none;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            font-weight: 600;
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            color: var(--dark);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(87, 197, 182, 0.4);
+        }
+
+        .btn-danger {
+            background: var(--danger);
+            color: white;
+        }
+
+        /* Methodology Section */
+        .methodology {
+            background: rgba(0,0,0,0.3);
+            padding: 20px;
+            border-radius: 12px;
+            margin-top: 20px;
+        }
+
+        .tech-stack {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .tech-badge {
+            background: rgba(87, 197, 182, 0.2);
+            color: var(--accent);
+            padding: 5px 12px;
+            border-radius: 15px;
+            font-size: 0.85rem;
+            border: 1px solid var(--accent);
+        }
+
+        /* Responsive */
+        @media (max-width: 968px) {
+            .main-container {
+                grid-template-columns: 1fr;
+                height: auto;
+            }
+            
+            .map-section {
+                height: 500px;
+            }
+        }
+
+        /* Loading */
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.9);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+            transition: opacity 0.5s;
+        }
+
+        .loading-overlay.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .spinner {
+            width: 60px;
+            height: 60px;
+            border: 4px solid rgba(255,255,255,0.1);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Notification */
+        .notification {
+            position: fixed;
+            top: 100px;
+            right: 20px;
+            background: var(--danger);
+            color: white;
+            padding: 15px 20px;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            transform: translateX(400px);
+            transition: transform 0.3s;
+            z-index: 1500;
+            max-width: 350px;
+        }
+
+        .notification.show {
+            transform: translateX(0);
+        }
+    </style>
+</head>
+<body>
+    <!-- Loading Screen -->
+    <div class="loading-overlay" id="loading">
+        <div class="spinner"></div>
+        <h3 style="margin-top: 20px; color: var(--accent);">Initializing BreathGuard...</h3>
+        <p style="color: #888; margin-top: 10px;">Loading ML models & spatial data</p>
+    </div>
+
+    <!-- Notification -->
+    <div class="notification" id="notification">
+        <div style="font-weight: bold; margin-bottom: 5px;">⚠️ Air Quality Alert</div>
+        <div id="notification-text">Entering high pollution zone!</div>
+    </div>
+
+    <!-- Header -->
+    <header class="header">
+        <div class="logo">
+            <i class="fas fa-lungs"></i>
+            <span>BreathGuard</span>
+        </div>
+        <div class="nav-tabs">
+            <div class="nav-tab active" onclick="switchTab('map')">
+                <i class="fas fa-map"></i> Live Map
+            </div>
+            <div class="nav-tab" onclick="switchTab('forecast')">
+                <i class="fas fa-chart-line"></i> Forecast
+            </div>
+            <div class="nav-tab" onclick="switchTab('routes')">
+                <i class="fas fa-route"></i> Green Routes
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <div class="main-container">
+        <!-- Map Section -->
+        <div class="map-section">
+            <div id="map"></div>
+            
+            <div class="map-overlay">
+                <div class="legend">
+                    <div style="font-weight: bold; margin-bottom: 10px; color: var(--accent);">AQI Levels</div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #4CAF50;"></div>
+                        <span>Good (0-30)</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #8BC34A;"></div>
+                        <span>Satisfactory (31-60)</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #FFC107;"></div>
+                        <span>Moderate (61-90)</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #FF9800;"></div>
+                        <span>Poor (91-120)</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #F44336;"></div>
+                        <span>Very Poor (121-250)</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #9C27B0;"></div>
+                        <span>Severe (250+)</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <!-- Stats Panel -->
+            <div class="panel">
+                <h3><i class="fas fa-tachometer-alt"></i> City Overview</h3>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-value" id="avgPM25">-</div>
+                        <div class="stat-label">Avg PM2.5</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="maxPM25">-</div>
+                        <div class="stat-label">Max PM2.5</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="sensorCount">-</div>
+                        <div class="stat-label">Active Sensors</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="safeRoutes">-</div>
+                        <div class="stat-label">Safe Routes</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Alert Panel -->
+            <div class="panel">
+                <h3><i class="fas fa-bell"></i> Smart Alerts</h3>
+                <div class="alert-box" id="dangerAlert">
+                    <div style="font-weight: bold; color: var(--danger); margin-bottom: 5px;">
+                        <i class="fas fa-exclamation-triangle"></i> Danger Zone Nearby
+                    </div>
+                    <div id="alertMessage">High pollution detected in your vicinity</div>
+                    <button class="btn btn-primary" style="margin-top: 10px; width: 100%; font-size: 0.9rem;" onclick="findSafeRoute()">
+                        Find Safe Route
+                    </button>
+                </div>
+                <div id="noAlert" style="color: #888; text-align: center; padding: 20px;">
+                    <i class="fas fa-check-circle" style="font-size: 2rem; color: var(--success); margin-bottom: 10px;"></i>
+                    <div>No alerts in your area</div>
+                </div>
+            </div>
+
+            <!-- Zone Details Panel -->
+            <div class="panel zone-info" id="zonePanel">
+                <h3><i class="fas fa-info-circle"></i> Zone Details</h3>
+                <div id="zoneContent">
+                    <p style="color: #888; text-align: center;">Click on a zone to view details</p>
+                </div>
+            </div>
+
+            <!-- 24h Forecast Panel -->
+            <div class="panel zone-info" id="forecastPanel">
+                <h3><i class="fas fa-clock"></i> 24-Hour Forecast</h3>
+                <div class="forecast-container" id="forecastContent">
+                    <!-- Dynamic content -->
+                </div>
+            </div>
+
+            <!-- Green Routes Panel -->
+            <div class="panel" id="routesPanel" style="display: none;">
+                <h3><i class="fas fa-leaf"></i> Green Corridor Planner</h3>
+                <div class="route-inputs">
+                    <div class="route-input">
+                        <i class="fas fa-map-marker-alt"></i>
+                        <input type="text" placeholder="Start location" id="startLoc">
+                    </div>
+                    <div class="route-input">
+                        <i class="fas fa-flag-checkered"></i>
+                        <input type="text" placeholder="Destination" id="endLoc">
+                    </div>
+                </div>
+                <button class="btn btn-primary" style="width: 100%;" onclick="planGreenRoute()">
+                    <i class="fas fa-search"></i> Find Cleanest Route
+                </button>
+                <div id="routeResults" style="margin-top: 15px;"></div>
+            </div>
+
+            <!-- Methodology -->
+            <div class="methodology">
+                <h4 style="color: var(--accent); margin-bottom: 10px;">
+                    <i class="fas fa-microchip"></i> Technology Stack
+                </h4>
+                <div class="tech-stack">
+                    <span class="tech-badge">IDW Interpolation</span>
+                    <span class="tech-badge">Random Forest ML</span>
+                    <span class="tech-badge">Real-time Alerts</span>
+                    <span class="tech-badge">Spatial Analysis</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="{{ url_for('static', filename='js/map.js') }}"></script>
+</body>
+</html>
