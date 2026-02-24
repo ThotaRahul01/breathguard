@@ -3,11 +3,10 @@
  Round 2 Submission - TECHNEX'26 INNORAVE Eco-Hackathon
  BreathGuard predicts air quality in sensor blind spots using IDW spatial interpolation and Machine Learning.
 
- Live Demo
+Application:https://breathguard.onrender.com
 
- Application:https://breathguard.onrender.com
-
- Video:
+ Video:https://youtu.be/YdfnQU2kPWE?si=eBT-E8SC3kENMLnL
+ Google drive:https://drive.google.com/file/d/1ckDwCtx8RkJML6NmmZ0378KidA0lDTDN/view?usp=drivesdk
 
  Features
  Spatial Interpolation:IDW algorithm for blind spots (85% accuracy)
@@ -66,6 +65,7 @@ python app.py
 **Step 5: Open in Browser**
 
 Navigate to: http://localhost:5000
+
 
 
 
