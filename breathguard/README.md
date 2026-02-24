@@ -29,7 +29,7 @@
 
  Installation
 
- git clone https://github.com/YOUR\_USERNAME/breathguard.git
+git clone https://github.com/ThotaRahul01/breathguard.git
  
  cd breathguard
 
@@ -66,6 +66,7 @@ python app.py
 **Step 5: Open in Browser**
 
 Navigate to: http://localhost:5000
+
 
 
 
